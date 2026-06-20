@@ -27,6 +27,8 @@ namespace Grep {
                     print_usage(2);
                     continue;
                 } else options.print_only_pattern = true;
+            } else if (argument == help_flag) {
+                print_help();
             } else if (options.pattern.size() == 0){
                 options.pattern = argument;
                 if (next_index == arguments.size()) options.read_stdin = true;
