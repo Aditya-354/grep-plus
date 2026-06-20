@@ -11,28 +11,47 @@ void print_all_options(const Grep::Options& options) {
     std::println("file_object: {}", options.file_object.string());
 }
 
-void GrepOutput(const Grep::Options& options) {
-    std::ifstream file { options.file_object.string() };
-    std::string line {};
-    size_t i { 1 };
+void case_insensitive_output(std::ifstream& file, std::string& pattern) {
 
-    if (file.is_open()) {
-        while (std::getline(file, line)) {
-            if (line.contains(options.pattern)) {
-                std::println("{}:\t{}", i, line);
-            }
-            i++;
-        }
-
-        file.close();
-    } else {
-        std::cerr << "Error: Unable to open file " << options.file_object << "\n";
-    }
 }
+
+class GrepCLI {
+    private:
+        Grep::Options m_options {};
+    public:
+        GrepCLI(Grep::Options options)
+            : m_options(options)
+        {}
+
+        void GrepOutput() {
+            std::ifstream file { m_options.file_object.string() };
+            std::string line {};
+            size_t i { 1 };
+
+            if (file.is_open()) {
+                while (std::getline(file, line)) {
+                    if (line.contains(m_options.pattern)) {
+                        if (m_options.case_insensitive) {
+                            case_insensitive_output(file, m_options.pattern);
+                        } else 
+                            std::println("{}:\t{}", i, line);
+                    }
+                    i++;
+                }
+
+                file.close();
+            } else {
+                std::cerr << "Error: Unable to open file " << m_options.file_object << "\n";
+            }
+        }
+};
+
 
 int main(int argc, char** argv) {
     Grep::Options options { Grep::parse_options(std::span<char*>(argv, argc)) };
     print_all_options(options);
-    GrepOutput(options);
+
+    GrepCLI grep { options };
+    grep.GrepOutput();
     return 0;
 }
