@@ -9,6 +9,7 @@
 
 namespace Grep {
     Options parse_options(std::span<char*> arguments) {
+        if (arguments.size() < 2) print_usage(1);
         Options options {};
 
         size_t i { 1 };
@@ -18,12 +19,12 @@ namespace Grep {
 
             if (argument == case_insensitive_flag) {
                 if (next_index == arguments.size()) {
-                    print_usage(1);
+                    print_usage(2);
                     continue;
                 } else options.case_insensitive = true;
             } else if (argument == print_only_pattern_flag) {
                 if (next_index == arguments.size()) {
-                    print_usage(1);
+                    print_usage(2);
                     continue;
                 } else options.print_only_pattern = true;
             } else if (options.pattern.size() == 0){
