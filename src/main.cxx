@@ -46,20 +46,35 @@ class GrepCLI {
             std::string res {};
             size_t j { 0 };
 
+            if (line.size() < pattern.size()) return "";
+
             for (size_t i { 0 }; i < line.size() - pattern.size(); ++i) {
                 j = 0;
 
-                while (j < pattern.size()) {
-                    if (std::tolower(line[i + j]) != std::tolower(pattern[j])) {
-                        res = "";
-                        break;
-                    }
+                if (m_options.case_insensitive) {
+                    while (j < pattern.size()) {
+                        if (std::tolower(line[i + j]) != std::tolower(pattern[j])) {
+                            res = "";
+                            break;
+                        }
 
-                    res += line[i + j];
-                    ++j;
+                        res += line[i + j];
+                        ++j;
+                        if (res.size() == pattern.size()) return res;
+                    }
+                } else {
+                    while (j < pattern.size()) {
+                        if (line[i + j] != pattern[j]) {
+                            res = "";
+                            break;
+                        }
+
+                        res += line[i + j];
+                        ++j;
+                        if (res.size() == pattern.size()) return res;
+                    }
                 }
             }
-
             return res;
         }
 
@@ -73,10 +88,17 @@ class GrepCLI {
                     if (m_options.case_insensitive) {
                         if (ipattern(line, m_options.pattern)) {
                             if (m_options.print_only_pattern) {
-                                std::println("{}:\t{}", i, opattern(line, m_options.pattern));
-                            }
-                            std::println("{}:\t{}", i, line);
+                                std::println("{}:{}", i, opattern(line, m_options.pattern));
+                            } else std::println("{}:{}", i, line);
                         }
+                    } else if (m_options.print_only_pattern) {
+                        if (!line.contains(m_options.pattern)) { ++i; continue; }
+                        std::println("{}:{}", i, opattern(line, m_options.pattern));
+                    } else {
+                        if (!line.contains(m_options.pattern)) {
+                            ++i;
+                            continue;
+                        } else std::println("{}:{}", i, line);
                     }
                     ++i;
                 }
