@@ -105,7 +105,7 @@ class GrepCLI
             return res;
         }
 
-        void start_grep()
+        void init_grep()
         {
             std::ifstream file { m_options.file_object.string() };
             std::string line {};
@@ -171,6 +171,6 @@ int main(int argc, char** argv)
     print_all_options(options);
 
     GrepCLI grep { options };
-    grep.start_grep();
+    grep.init_grep();
     return 0;
 }
