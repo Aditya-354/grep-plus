@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <cstdlib>
 #include <print>
 
 void print_all_options(const Grep::Options& options) 
@@ -12,6 +13,10 @@ void print_all_options(const Grep::Options& options)
     std::println("read_stdin: {}", options.read_stdin);
     std::println("file_object: {}", options.file_object.string());
 }
+
+constexpr std::string_view RED { "\x1b[31m" };
+constexpr std::string_view GREEN { "\x1b[32m" };
+constexpr std::string_view ESC { "\x1b[0m" };
 
 class GrepCLI 
 {
@@ -37,9 +42,19 @@ class GrepCLI
 
                 while (j < pattern.size())
                 {
-                    if (std::tolower(line[i + j]) != std::tolower(pattern[j]))
+                    if (m_options.case_insensitive)
                     {
-                        break;
+                        if (std::tolower(line[i + j]) != std::tolower(pattern[j]))
+                        {
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        if (line[i + j] != pattern[j])
+                        {
+                            break;
+                        }
                     }
 
                     ++j;
@@ -105,15 +120,43 @@ class GrepCLI
             return res;
         }
 
+        std::string make_colored_line(std::string& line, std::vector<size_t>& positions)
+        {
+            std::string result {};
+            size_t position_idx {};
+
+            for (size_t i {}; i < line.size(); ++ i)
+            {
+
+                if (position_idx < positions.size() && i == positions[position_idx])
+                {
+                    result += RED;
+                    result += line.substr(positions[position_idx], m_options.pattern.size());
+                    result += ESC;
+                    while (i < line.size() && i < positions[position_idx] + m_options.pattern.size())
+                    {
+                        i ++;
+                    }
+                    position_idx ++;
+                }
+                else
+                {
+                    result += line[i];
+                }
+            }
+            return result;
+        }
+
         void init_grep()
         {
             std::ifstream file { m_options.file_object.string() };
+            std::istream& input { m_options.read_stdin ? std::cin : file };
             std::string line {};
             size_t i { 1 };
 
-            if (file.is_open())
+            if (input && file.is_open())
             {
-                while (std::getline(file, line))
+                while (std::getline(input, line))
                 {
                     if (m_options.case_insensitive)
                     {
@@ -123,11 +166,12 @@ class GrepCLI
                         {
                             if (m_options.print_only_pattern)
                             {
-                                std::println("\x1b[32m{}\x1b[0m:\x1b[31m{}\x1b[0m", i, opattern(line, m_options.pattern));
+                                std::println("{}{}{}:{}{}{}", GREEN, i, ESC, RED, opattern(line, m_options.pattern), ESC);
                             }
                             else
                             {
-                                std::println("\x1b[32m{}\x1b[0m:\x1b[31m{}\x1b[0m", i, line);
+                                std::string colored_line  { make_colored_line(line, pattern_positions) };
+                                std::println("{}{}{}:{}", GREEN, i, ESC, colored_line);
                             }
                         }
                     }
@@ -135,24 +179,27 @@ class GrepCLI
                     {
                         if (!line.contains(m_options.pattern))
                         { 
-                            ++i; 
+                            ++ i; 
                             continue;
                         }
-                        std::println("\x1b[32m{}\x1b[0m:\x1b[31m{}\x1b[0m", i, opattern(line, m_options.pattern));
+                        std::vector<std::string> patterns_in_line {};
+                        std::println("{}{}{}:{}{}{}", GREEN, i, ESC, RED, opattern(line, m_options.pattern), ESC);
                     }
                     else
                     {
                         if (!line.contains(m_options.pattern))
                         {
-                            ++i;
+                            ++ i;
                             continue;
                         }
                         else
                         {
-                            std::println("\x1b[32m{}\x1b[0m:\x1b[31m{}\x1b[0m", i, line);
+                            std::vector<size_t> pattern_positions { ipattern(line, m_options.pattern) };
+                            std::string colored_line  { make_colored_line(line, pattern_positions) };
+                            std::println("{}{}{}:{}", GREEN, i, ESC, colored_line);
                         }
                     }
-                    ++i;
+                    ++ i;
                 }
 
                 file.close();
@@ -160,6 +207,7 @@ class GrepCLI
             else
             {
                 std::cerr << "Error: Unable to open file " << m_options.file_object << "\n";
+                std::exit(3);
             }
         }
 };
