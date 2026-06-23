@@ -27,6 +27,7 @@ class GrepCLI
             : m_options(options)
         {}
 
+    private:
         std::vector<size_t> ipattern(std::string& line, std::string& pattern) const
         {
             std::vector<size_t> positions {};
@@ -36,7 +37,7 @@ class GrepCLI
                 return {};
             }
 
-            for (size_t i { 0 }; i < line.size() - pattern.size(); ++i)
+            for (size_t i { 0 }; i <= line.size() - pattern.size(); ++i)
             {
                 size_t j { 0 };
 
@@ -69,71 +70,19 @@ class GrepCLI
             return positions;
         }
 
-        std::string opattern(std::string& line, std::string& pattern) const
-        {
-            std::string res {};
-            size_t j { 0 };
-
-            if (line.size() < pattern.size()) return "";
-
-            for (size_t i { 0 }; i < line.size() - pattern.size(); ++i)
-            {
-                j = 0;
-
-                if (m_options.case_insensitive)
-                {
-                    while (j < pattern.size())
-                    {
-                        if (std::tolower(line[i + j]) != std::tolower(pattern[j]))
-                        {
-                            res = "";
-                            break;
-                        }
-
-                        res += line[i + j];
-                        ++j;
-                        if (res.size() == pattern.size())
-                        {
-                            return res;
-                        }
-                    }
-                }
-                else
-                {
-                    while (j < pattern.size())
-                    {
-                        if (line[i + j] != pattern[j])
-                        {
-                            res = "";
-                            break;
-                        }
-
-                        res += line[i + j];
-                        ++j;
-                        if (res.size() == pattern.size())
-                        {
-                            return res;
-                        }
-                    }
-                }
-            }
-            return res;
-        }
-
-        std::string make_colored_line(std::string& line, std::vector<size_t>& positions)
+        std::string color_the_pattern(std::string& line, std::vector<size_t>& positions)
         {
             std::string result {};
             size_t position_idx {};
 
             for (size_t i {}; i < line.size(); ++ i)
             {
-
                 if (position_idx < positions.size() && i == positions[position_idx])
                 {
                     result += RED;
                     result += line.substr(positions[position_idx], m_options.pattern.size());
                     result += ESC;
-                    while (i < line.size() && i < positions[position_idx] + m_options.pattern.size())
+                    while (i < line.size() && i < positions[position_idx] + m_options.pattern.size() - 1)
                     {
                         i ++;
                     }
@@ -147,67 +96,102 @@ class GrepCLI
             return result;
         }
 
+        std::vector<std::string> get_only_matched_pattern(std::string& line, std::vector<size_t>& positions)
+        {
+            std::vector<std::string> matched_only_patterns {};
+
+            for (const auto& pos : positions)
+            {
+                matched_only_patterns.push_back(
+                        std::string(RED) +
+                        line.substr(pos, m_options.pattern.size()) +
+                        std::string(ESC)
+                        );
+            }
+            return matched_only_patterns;
+        }
+
+    public:
         void init_grep()
         {
             std::ifstream file { m_options.file_object.string() };
             std::istream& input { m_options.read_stdin ? std::cin : file };
             std::string line {};
             size_t i { 1 };
+            bool file_is_open { false };
 
-            if (input && file.is_open())
+            if (&input != &std::cin)
             {
-                while (std::getline(input, line))
+                if (file.is_open())
                 {
-                    if (m_options.case_insensitive)
-                    {
-                        std::vector<size_t> pattern_positions { ipattern(line, m_options.pattern) };
+                    file_is_open = true;
+                }
+                else
+                {
+                    std::cerr << "Error: Unable to open file " << m_options.file_object << "\n";
+                }
+            }
 
-                        if (!pattern_positions.empty())
-                        {
-                            if (m_options.print_only_pattern)
-                            {
-                                std::println("{}{}{}:{}{}{}", GREEN, i, ESC, RED, opattern(line, m_options.pattern), ESC);
-                            }
-                            else
-                            {
-                                std::string colored_line  { make_colored_line(line, pattern_positions) };
-                                std::println("{}{}{}:{}", GREEN, i, ESC, colored_line);
-                            }
-                        }
-                    }
-                    else if (m_options.print_only_pattern)
+            while (std::getline(input, line))
+            {
+                if (m_options.case_insensitive)
+                {
+                    std::vector<size_t> pattern_positions { ipattern(line, m_options.pattern) };
+
+                    if (!pattern_positions.empty())
                     {
-                        if (!line.contains(m_options.pattern))
-                        { 
-                            ++ i; 
-                            continue;
-                        }
-                        std::vector<std::string> patterns_in_line {};
-                        std::println("{}{}{}:{}{}{}", GREEN, i, ESC, RED, opattern(line, m_options.pattern), ESC);
-                    }
-                    else
-                    {
-                        if (!line.contains(m_options.pattern))
+                        if (m_options.print_only_pattern)
                         {
-                            ++ i;
-                            continue;
+                            std::vector<std::string> matched_patterns { get_only_matched_pattern(line, pattern_positions) };
+
+                            for (const auto& mp : matched_patterns)
+                            {
+                                std::println("{}{}{}:{}", GREEN, i, ESC, mp);
+                            }
                         }
                         else
                         {
-                            std::vector<size_t> pattern_positions { ipattern(line, m_options.pattern) };
-                            std::string colored_line  { make_colored_line(line, pattern_positions) };
+                            std::string colored_line  { color_the_pattern(line, pattern_positions) };
                             std::println("{}{}{}:{}", GREEN, i, ESC, colored_line);
                         }
                     }
-                    ++ i;
                 }
+                else if (m_options.print_only_pattern)
+                {
+                    if (!line.contains(m_options.pattern))
+                    { 
+                        ++ i; 
+                        continue;
+                    }
 
-                file.close();
+                    std::vector<size_t> pattern_positions { ipattern(line, m_options.pattern) };
+                    std::vector<std::string> matched_patterns { get_only_matched_pattern(line, pattern_positions) };
+
+                    for (const auto& mp : matched_patterns)
+                    {
+                        std::println("{}{}{}:{}", GREEN, i, ESC, mp);
+                    }
+                }
+                else
+                {
+                    if (!line.contains(m_options.pattern))
+                    {
+                        ++ i;
+                        continue;
+                    }
+                    else
+                    {
+                        std::vector<size_t> pattern_positions { ipattern(line, m_options.pattern) };
+                        std::string colored_pattern  { color_the_pattern(line, pattern_positions) };
+                        std::println("{}{}{}:{}", GREEN, i, ESC, colored_pattern);
+                    }
+                }
+                ++ i;
             }
-            else
+
+            if (file_is_open)
             {
-                std::cerr << "Error: Unable to open file " << m_options.file_object << "\n";
-                std::exit(3);
+                file.close();
             }
         }
 };
@@ -222,3 +206,4 @@ int main(int argc, char** argv)
     grep.init_grep();
     return 0;
 }
+
