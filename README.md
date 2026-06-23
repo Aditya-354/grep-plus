@@ -12,4 +12,4 @@
 
 - Print colored line numbers for getting the exact location of the pattern in the given input stream.
 
-![output screenshot](screenshot.png)
+![output screenshot](output_screenshot.png)
