@@ -5,15 +5,6 @@
 #include <cstdlib>
 #include <print>
 
-void print_all_options(const Grep::Options& options) 
-{
-    std::println("print_only_pattern: {}", options.print_only_pattern);
-    std::println("case_insensitive: {}", options.case_insensitive);
-    std::println("pattern: {}", options.pattern);
-    std::println("read_stdin: {}", options.read_stdin);
-    std::println("file_object: {}", options.file_object.string());
-}
-
 constexpr std::string_view RED { "\x1b[31m" };
 constexpr std::string_view GREEN { "\x1b[32m" };
 constexpr std::string_view ESC { "\x1b[0m" };
@@ -28,7 +19,7 @@ class GrepCLI
         {}
 
     private:
-        std::vector<size_t> ipattern(std::string& line, std::string& pattern) const
+        std::vector<size_t> ipattern(const std::string& line, const std::string& pattern) const
         {
             std::vector<size_t> positions {};
 
@@ -70,7 +61,7 @@ class GrepCLI
             return positions;
         }
 
-        std::string color_the_pattern(std::string& line, std::vector<size_t>& positions)
+        std::string color_the_pattern(const std::string& line, const std::vector<size_t>& positions)
         {
             std::string result {};
             size_t position_idx {};
@@ -96,7 +87,7 @@ class GrepCLI
             return result;
         }
 
-        std::vector<std::string> get_only_matched_pattern(std::string& line, std::vector<size_t>& positions)
+        std::vector<std::string> get_only_matched_pattern(const std::string& line, const std::vector<size_t>& positions)
         {
             std::vector<std::string> matched_only_patterns {};
 
@@ -111,27 +102,10 @@ class GrepCLI
             return matched_only_patterns;
         }
 
-    public:
-        void init_grep()
+        void process_grep(std::istream& input)
         {
-            std::ifstream file { m_options.file_object.string() };
-            std::istream& input { m_options.read_stdin ? std::cin : file };
             std::string line {};
             size_t i { 1 };
-            bool file_is_open { false };
-
-            if (&input != &std::cin)
-            {
-                if (file.is_open())
-                {
-                    file_is_open = true;
-                }
-                else
-                {
-                    std::cerr << "Error: Unable to open file " << m_options.file_object << "\n";
-                }
-            }
-
             while (std::getline(input, line))
             {
                 if (m_options.case_insensitive)
@@ -188,6 +162,29 @@ class GrepCLI
                 }
                 ++ i;
             }
+        }
+
+    public:
+        void init_grep()
+        {
+            std::ifstream file { m_options.file_object.string() };
+            std::istream& input { m_options.read_stdin ? std::cin : file };
+            size_t i { 1 };
+            bool file_is_open { false };
+
+            if (&input != &std::cin)
+            {
+                if (file.is_open())
+                {
+                    file_is_open = true;
+                }
+                else
+                {
+                    std::cerr << "Error: Unable to open file " << m_options.file_object << "\n";
+                }
+            }
+
+            process_grep(input);
 
             if (file_is_open)
             {
@@ -200,8 +197,6 @@ class GrepCLI
 int main(int argc, char** argv)
 {
     Grep::Options options { Grep::parse_options(std::span<char*>(argv, argc)) };
-    print_all_options(options);
-
     GrepCLI grep { options };
     grep.init_grep();
     return 0;
