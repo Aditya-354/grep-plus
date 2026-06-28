@@ -18,7 +18,8 @@ class GrepCLI {
         {}
 
     private:
-        std::vector<size_t> ipattern(const std::string& line, const std::string& pattern) const {
+        auto ipattern(const std::string& line, const std::string& pattern) const
+            -> std::vector<size_t> {
             std::vector<size_t> positions {};
 
             if (pattern.size() > line.size()) {
@@ -30,9 +31,7 @@ class GrepCLI {
 
                 while (j < pattern.size()) {
                     if (m_options.case_insensitive) {
-                        if (std::tolower(line[i + j]) != std::tolower(pattern[j])) {
-                            break;
-                        }
+                        if (std::tolower(line[i + j]) != std::tolower(pattern[j])) break;
                     }
                     else {
                         if (line[i + j] != pattern[j]) {
@@ -51,7 +50,8 @@ class GrepCLI {
             return positions;
         }
 
-        std::string color_the_pattern(const std::string& line, const std::vector<size_t>& positions) {
+        auto color_the_pattern(const std::string& line, const std::vector<size_t>& positions)
+            -> std::string {
             std::string result {};
             size_t position_idx {};
 
@@ -72,7 +72,8 @@ class GrepCLI {
             return result;
         }
 
-        std::vector<std::string> get_only_matched_pattern(const std::string& line, const std::vector<size_t>& positions) {
+        auto get_only_matched_pattern(const std::string& line, const std::vector<size_t>& positions) 
+            -> std::vector<std::string> {
             std::vector<std::string> matched_only_patterns {};
 
             for (const auto& pos : positions) {
@@ -85,7 +86,8 @@ class GrepCLI {
             return matched_only_patterns;
         }
 
-        void process_grep(std::istream& input) {
+        auto process_grep(std::istream& input) 
+            -> void {
             std::string line {};
             size_t i { 1 };
             while (std::getline(input, line)) {
@@ -135,7 +137,8 @@ class GrepCLI {
         }
 
     public:
-        void init_grep() {
+        auto init_grep() 
+            -> void {
             std::ifstream file { m_options.file_object.string() };
             std::istream& input { m_options.read_stdin ? std::cin : file };
             size_t i { 1 };
@@ -159,7 +162,8 @@ class GrepCLI {
 };
 
 
-int main(int argc, char** argv) {
+auto main(int argc, char** argv)
+    -> int {
     Grep::Options options { Grep::parse_options(std::span<char*>(argv, argc)) };
     GrepCLI grep { options };
     grep.init_grep();
